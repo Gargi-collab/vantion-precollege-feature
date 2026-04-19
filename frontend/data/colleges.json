@@ -1,0 +1,182 @@
+[
+  {
+    "name": "Stanford",
+    "region": "west coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["computer science", "engineering", "business", "humanities"],
+    "vibes": ["builder", "interdisciplinary", "initiative"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Carnegie Mellon",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["computer science", "engineering", "design", "drama"],
+    "vibes": ["technical depth", "specialization", "rigor"],
+    "testing": "helpful"
+  },
+  {
+    "name": "MIT",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["computer science", "engineering", "mathematics", "physics"],
+    "vibes": ["problem solving", "research", "maker"],
+    "testing": "important"
+  },
+  {
+    "name": "Georgia Tech",
+    "region": "south",
+    "bucket": "reach",
+    "selectivity": "high",
+    "majors": ["computer science", "engineering", "business", "design"],
+    "vibes": ["technical rigor", "applied learning", "innovation"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Johns Hopkins",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["biology", "medicine", "public health", "biomedical engineering"],
+    "vibes": ["research", "academic intensity", "health"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Duke",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["biology", "public policy", "economics", "engineering"],
+    "vibes": ["leadership", "research", "polish"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Brown",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["humanities", "computer science", "public policy", "creative writing"],
+    "vibes": ["intellectual voice", "independence", "open curriculum"],
+    "testing": "optional"
+  },
+  {
+    "name": "Georgetown",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "high",
+    "majors": ["public policy", "international relations", "business", "humanities"],
+    "vibes": ["writing", "leadership", "public service"],
+    "testing": "helpful"
+  },
+  {
+    "name": "USC",
+    "region": "west coast",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["business", "film", "computer science", "communications"],
+    "vibes": ["portfolio", "leadership", "applied ambition"],
+    "testing": "optional"
+  },
+  {
+    "name": "Northeastern",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["computer science", "business", "health", "engineering"],
+    "vibes": ["co-op", "practical experience", "career clarity"],
+    "testing": "optional"
+  },
+  {
+    "name": "Purdue",
+    "region": "midwest",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["engineering", "computer science", "aviation", "business"],
+    "vibes": ["technical depth", "value", "hands-on"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Case Western",
+    "region": "midwest",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["biology", "medicine", "engineering", "data science"],
+    "vibes": ["research", "pre-health", "science"],
+    "testing": "optional"
+  },
+  {
+    "name": "Emory",
+    "region": "south",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["biology", "public health", "humanities", "business"],
+    "vibes": ["pre-health", "service", "writing"],
+    "testing": "optional"
+  },
+  {
+    "name": "William & Mary",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["public policy", "history", "humanities", "economics"],
+    "vibes": ["writing", "discussion", "academic seriousness"],
+    "testing": "optional"
+  },
+  {
+    "name": "Arizona State University",
+    "region": "west coast",
+    "bucket": "safety",
+    "selectivity": "broad",
+    "majors": ["computer science", "engineering", "business", "health", "humanities"],
+    "vibes": ["access", "innovation", "scale"],
+    "testing": "optional"
+  },
+  {
+    "name": "University of Arizona",
+    "region": "west coast",
+    "bucket": "safety",
+    "selectivity": "broad",
+    "majors": ["biology", "health", "engineering", "business", "humanities"],
+    "vibes": ["value", "research access", "regional fit"],
+    "testing": "optional"
+  },
+  {
+    "name": "Oregon State",
+    "region": "west coast",
+    "bucket": "safety",
+    "selectivity": "broad",
+    "majors": ["engineering", "computer science", "environmental science", "business"],
+    "vibes": ["hands-on", "practical", "steady"],
+    "testing": "optional"
+  },
+  {
+    "name": "Drexel",
+    "region": "east coast",
+    "bucket": "safety",
+    "selectivity": "medium",
+    "majors": ["business", "engineering", "health", "design"],
+    "vibes": ["co-op", "career focus", "applied learning"],
+    "testing": "optional"
+  },
+  {
+    "name": "George Washington",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["public policy", "international relations", "public health", "business"],
+    "vibes": ["policy", "city access", "leadership"],
+    "testing": "optional"
+  },
+  {
+    "name": "Tulane",
+    "region": "south",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["public health", "business", "humanities", "environment"],
+    "vibes": ["service", "community", "initiative"],
+    "testing": "optional"
+  }
+]
