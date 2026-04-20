@@ -22,6 +22,13 @@ npm run dev
 
 Then open [http://localhost:3000](http://localhost:3000).
 
+## One-click launchers
+
+- macOS: double-click [launch-vantion.command](/Users/gargidusane/Documents/New%20project/launch-vantion.command)
+- Windows: run [launch-vantion.bat](/Users/gargidusane/Documents/New%20project/launch-vantion.bat)
+
+Both launchers install dependencies, start the local app on an open port, and open the site in your browser.
+
 ## Notes
 
 - The new feature is intentionally demo-stable and does not require auth, a database, or live scraping.

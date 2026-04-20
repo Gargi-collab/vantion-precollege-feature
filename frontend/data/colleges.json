@@ -178,5 +178,131 @@
     "majors": ["public health", "business", "humanities", "environment"],
     "vibes": ["service", "community", "initiative"],
     "testing": "optional"
+  },
+  {
+    "name": "Northwestern",
+    "region": "midwest",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["computer science", "journalism", "public policy", "economics"],
+    "vibes": ["research", "writing", "interdisciplinary"],
+    "testing": "optional"
+  },
+  {
+    "name": "Rice",
+    "region": "south",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["engineering", "computer science", "business", "humanities"],
+    "vibes": ["research", "close faculty", "builder"],
+    "testing": "optional"
+  },
+  {
+    "name": "Princeton",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["public policy", "humanities", "engineering", "computer science"],
+    "vibes": ["writing", "research", "service"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Yale",
+    "region": "east coast",
+    "bucket": "reach",
+    "selectivity": "ultra",
+    "majors": ["humanities", "public policy", "history", "computer science"],
+    "vibes": ["writing", "discussion", "intellectual voice"],
+    "testing": "helpful"
+  },
+  {
+    "name": "Tufts",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["international relations", "engineering", "computer science", "humanities"],
+    "vibes": ["global outlook", "discussion", "interdisciplinary"],
+    "testing": "optional"
+  },
+  {
+    "name": "American University",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["public policy", "international relations", "public health", "business"],
+    "vibes": ["policy", "city access", "public service", "writing"],
+    "testing": "optional"
+  },
+  {
+    "name": "University of Pittsburgh",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["biology", "public health", "engineering", "business"],
+    "vibes": ["pre-health", "research", "value"],
+    "testing": "optional"
+  },
+  {
+    "name": "Babson",
+    "region": "east coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["business", "entrepreneurship", "economics", "communications"],
+    "vibes": ["entrepreneurship", "initiative", "applied learning"],
+    "testing": "optional"
+  },
+  {
+    "name": "Indiana University Bloomington",
+    "region": "midwest",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["business", "economics", "public policy", "media"],
+    "vibes": ["business", "value", "campus leadership"],
+    "testing": "optional"
+  },
+  {
+    "name": "Santa Clara University",
+    "region": "west coast",
+    "bucket": "target",
+    "selectivity": "medium",
+    "majors": ["business", "computer science", "engineering", "economics"],
+    "vibes": ["innovation", "ethics", "silicon valley"],
+    "testing": "optional"
+  },
+  {
+    "name": "University of Texas at Austin",
+    "region": "south",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["business", "computer science", "engineering", "public policy"],
+    "vibes": ["value", "applied learning", "city access"],
+    "testing": "helpful"
+  },
+  {
+    "name": "University of Washington",
+    "region": "west coast",
+    "bucket": "target",
+    "selectivity": "high",
+    "majors": ["computer science", "engineering", "business", "public health"],
+    "vibes": ["innovation", "research", "city access"],
+    "testing": "optional"
+  },
+  {
+    "name": "Michigan State",
+    "region": "midwest",
+    "bucket": "safety",
+    "selectivity": "broad",
+    "majors": ["business", "humanities", "political science", "engineering"],
+    "vibes": ["value", "leadership", "broad options"],
+    "testing": "optional"
+  },
+  {
+    "name": "University of Alabama",
+    "region": "south",
+    "bucket": "safety",
+    "selectivity": "broad",
+    "majors": ["business", "engineering", "public policy", "communications"],
+    "vibes": ["merit aid", "value", "leadership"],
+    "testing": "optional"
   }
 ]

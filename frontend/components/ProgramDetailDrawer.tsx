@@ -10,7 +10,7 @@ export function ProgramDetailDrawer({ match }: ProgramDetailDrawerProps) {
     <aside className="glass-card h-fit p-6 lg:p-7">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="soft-label">Deep Recommendation</p>
+          <p className="soft-label">Selected Program</p>
           <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950">{match.program.name}</h3>
           <p className="mt-2 text-sm text-slate-500">
             {match.program.provider} • {match.program.location} • {labelize(match.program.mode)}

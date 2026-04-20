@@ -71,19 +71,10 @@ function buildMockProgramInsights(profile: StudentProfile, match: Omit<MatchResu
 }
 
 function buildMockCounselorSummary(profile: StudentProfile, insights: CounselorInsights, topProgramName?: string) {
-  const scenario = getScenario(profile);
-  const scenarioSummary: Record<string, string> = {
-    cs: `Main move: build a clearer CS profile through rigor, one real technical lane, and ${topProgramName || "a good-fit summer option"}.`,
-    engineering: `Main move: pair hard classes with visible build work, then use ${topProgramName || "summer planning"} to add depth.`,
-    premed: "Main move: connect science rigor, service, and real health exposure.",
-    business: "Main move: turn interest into initiative, ownership, and results.",
-    policy: "Main move: let writing, civic voice, and leadership lead the story.",
-    humanities: "Main move: build more voice, more depth, and fewer scattered priorities.",
-    creative: "Main move: focus on output, style, and visible creative ownership.",
-    general: "Main move: use the best school options first, then add one strong summer step.",
-  };
-
-  return `${scenarioSummary[scenario]} ${profile.dreamUniversities.length ? `Best read against the current list: ${profile.dreamUniversities.slice(0, 2).join(" and ")}.` : ""}`.trim();
+  const lead = insights.atGlance.bestNextMove;
+  const programNote = topProgramName ? ` Summer option: ${topProgramName}.` : "";
+  const collegeNote = profile.dreamUniversities.length ? ` College direction: ${insights.atGlance.collegeDirection}` : "";
+  return `${lead}${programNote}${collegeNote}`.trim();
 }
 
 async function generateWithOpenAI(profile: StudentProfile, match: Omit<MatchResult, "ai">) {

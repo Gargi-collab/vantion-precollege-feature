@@ -69,6 +69,11 @@ export function ProgramCard({ match, isSelected, featured, onSelect }: ProgramCa
         </div>
       </div>
 
+      <div className="mt-4 rounded-[22px] border border-line bg-[#fffaf5] p-4">
+        <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Watch out for</p>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{match.ai.drawbacks[0] || match.program.drawbacks[0]}</p>
+      </div>
+
       <div className="mt-5 flex flex-wrap items-center gap-3 text-sm text-slate-500">
         <span>Acceptance difficulty: {labelize(match.program.competitiveness)}</span>
         <span className="text-slate-300">•</span>

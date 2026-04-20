@@ -124,6 +124,15 @@ export interface StrategicSummary {
   recommendedDirection: string;
 }
 
+export interface AtAGlanceSummary {
+  bestNextMove: string;
+  biggestGap: string;
+  strongestSchoolOpportunity: string;
+  bestFitSummerOption: string;
+  testingStance: string;
+  collegeDirection: string;
+}
+
 export interface PrioritizedOpportunity {
   name: string;
   priority: PriorityLevel;
@@ -172,6 +181,7 @@ export interface ActionPlan {
 }
 
 export interface CounselorInsights {
+  atGlance: AtAGlanceSummary;
   strategicSummary: StrategicSummary;
   schoolOpportunityStrategy: SchoolOpportunityStrategy;
   testingStrategy: TestingStrategy;

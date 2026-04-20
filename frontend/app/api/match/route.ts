@@ -7,7 +7,7 @@ export async function POST(request: Request) {
   try {
     const profile = (await request.json()) as StudentProfile;
     const matches = getMatches(profile);
-    const enrichedMatches = await enrichMatchesWithInsights(profile, matches.slice(0, 6));
+    const enrichedMatches = await enrichMatchesWithInsights(profile, matches.slice(0, 3));
     const insights = buildCounselorInsights(profile, matches);
 
     const response: MatchResponse = {

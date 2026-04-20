@@ -3,11 +3,11 @@ import { labelize } from "@/lib/utils";
 
 export function TopThreeComparisonTable({ matches }: { matches: MatchResult[] }) {
   return (
-    <div className="glass-card p-6">
+    <div className="rounded-[24px] border border-line bg-[#fffdfa] p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="soft-label">Compare Top 3</p>
-          <h3 className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-slate-950">Decision view</h3>
+          <h3 className="mt-2 text-xl font-semibold tracking-[-0.03em] text-slate-950">Decision view</h3>
         </div>
         <div className="rounded-full border border-line bg-[#fffaf4] px-4 py-2 text-sm text-slate-600">Best for a quick side-by-side read</div>
       </div>

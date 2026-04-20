@@ -2,6 +2,7 @@ import colleges from "@/data/colleges.json";
 import programs from "@/data/programs.json";
 import {
   ActionPlan,
+  AtAGlanceSummary,
   CollegeListStrategy,
   CollegeRecommendation,
   CounselorInsights,
@@ -28,6 +29,7 @@ const COLLEGES = colleges as Array<{
 }>;
 
 const budgetWeights = { low: 1, moderate: 2, high: 3, flexible: 4 };
+const selectivityWeights = { ultra: 4, high: 3, medium: 2, broad: 1 };
 const gpaMidpoint: Record<string, number> = {
   "3.9+": 3.95,
   "3.6-3.8": 3.7,
@@ -46,22 +48,44 @@ type Scenario =
   | "creative"
   | "general";
 
+type GapKey = "rigor" | "research" | "leadership" | "service" | "voice" | "hands-on" | "direction";
+
+type ScoredOpportunity = PrioritizedOpportunity & { score: number };
+
 function normalizeWords(values: string[]) {
   return values.map((value) => value.toLowerCase().trim()).filter(Boolean);
 }
 
 function includesAny(source: string[], targets: string[]) {
-  return source.some((item) => targets.some((target) => item.toLowerCase().includes(target.toLowerCase())));
+  return source.some((item) =>
+    targets.some((target) => {
+      const sourceValue = item.toLowerCase();
+      const targetValue = target.toLowerCase();
+      return sourceValue.includes(targetValue) || targetValue.includes(sourceValue);
+    }),
+  );
 }
 
 function majorTerms(profile: StudentProfile) {
   return normalizeWords([profile.dreamMajor, ...profile.academicInterests, ...profile.careerInterests]);
 }
 
+function profileWords(profile: StudentProfile) {
+  return normalizeWords([
+    profile.dreamMajor,
+    ...profile.academicInterests,
+    ...profile.careerInterests,
+    ...profile.extracurriculars,
+    ...profile.projectsAwardsCompetitions,
+    ...profile.strengths,
+    ...profile.weaknesses,
+  ]);
+}
+
 function getScenario(profile: StudentProfile): Scenario {
   const text = majorTerms(profile).join(" ");
   if (/(computer|software|ai|data|machine learning|cyber)/.test(text)) return "cs";
-  if (/(engineering|robotics|mechanical|electrical|aerospace|civil)/.test(text)) return "engineering";
+  if (/(engineering|robotics|mechanical|electrical|aerospace|civil|biomedical engineering)/.test(text)) return "engineering";
   if (/(biology|medicine|health|pre-med|neuroscience|public health|biomedical)/.test(text)) return "premed";
   if (/(business|finance|entrepreneur|product|economics|marketing)/.test(text)) return "business";
   if (/(policy|government|international|law|politics|civic)/.test(text)) return "policy";
@@ -70,9 +94,53 @@ function getScenario(profile: StudentProfile): Scenario {
   return "general";
 }
 
+function advancedCourseCount(profile: StudentProfile) {
+  return profile.coursesAvailable.filter((course) => /(ap|ib|honors|dual)/i.test(course)).length;
+}
+
+function leadershipDepth(profile: StudentProfile) {
+  return profile.leadershipRoles.length + profile.leadershipOpportunities.filter((item) => /(captain|officer|lead|editor|chair|president|secretary|treasurer)/i.test(item)).length;
+}
+
+function projectDepth(profile: StudentProfile) {
+  return profile.projectsAwardsCompetitions.length + profile.extracurriculars.filter((item) => /(project|app|research|publication|business|podcast|initiative)/i.test(item)).length;
+}
+
+function hasWeakness(profile: StudentProfile, pattern: RegExp) {
+  return profile.weaknesses.some((item) => pattern.test(item.toLowerCase()));
+}
+
+function hasActivity(profile: StudentProfile, pattern: RegExp) {
+  return [...profile.extracurriculars, ...profile.clubsAvailable, ...profile.leadershipRoles].some((item) => pattern.test(item.toLowerCase()));
+}
+
+function topSelectiveGoals(profile: StudentProfile) {
+  return profile.dreamUniversities.some((school) =>
+    ["stanford", "carnegie mellon", "mit", "johns hopkins", "duke", "brown", "georgetown", "northwestern", "rice", "princeton", "yale"].some((name) =>
+      school.toLowerCase().includes(name),
+    ),
+  );
+}
+
+function inferBiggestGap(profile: StudentProfile, scenario: Scenario): GapKey {
+  const advancedCourses = advancedCourseCount(profile);
+  const leadership = leadershipDepth(profile);
+
+  if (hasWeakness(profile, /(research|lab|independent study)/)) return "research";
+  if (hasWeakness(profile, /(leadership|ownership|initiative)/) || leadership === 0) return "leadership";
+  if (hasWeakness(profile, /(rigor|quant|math|coursework|testing)/) || (advancedCourses < 2 && topSelectiveGoals(profile))) return "rigor";
+
+  if (scenario === "premed" && !hasActivity(profile, /(hosa|hospital|clinic|health|service|volunteer)/)) return "service";
+  if ((scenario === "policy" || scenario === "humanities") && !hasActivity(profile, /(debate|model un|newspaper|journal|speech|writing)/)) return "voice";
+  if (scenario === "engineering" && !hasActivity(profile, /(robotics|maker|build|engineering|science olympiad)/) && projectDepth(profile) === 0) return "hands-on";
+  if (scenario === "business" && leadership < 2) return "leadership";
+
+  return "direction";
+}
+
 function rankLabel(score: number) {
   if (score >= 78) return "high" as const;
-  if (score >= 55) return "medium" as const;
+  if (score >= 56) return "medium" as const;
   return "low" as const;
 }
 
@@ -85,7 +153,7 @@ function scenarioCourseKeywords(scenario: Scenario) {
     case "premed":
       return ["biology", "chemistry", "anatomy", "statistics", "psychology"];
     case "business":
-      return ["economics", "statistics", "business", "calculus", "finance"];
+      return ["economics", "statistics", "business", "finance", "calculus"];
     case "policy":
       return ["government", "history", "english", "politics", "sociology"];
     case "humanities":
@@ -106,64 +174,131 @@ function scenarioActivityKeywords(scenario: Scenario) {
     case "premed":
       return ["hosa", "science", "health", "service", "hospital"];
     case "business":
-      return ["deca", "business", "entrepreneur", "government", "finance"];
+      return ["deca", "business", "entrepreneur", "government", "yearbook"];
     case "policy":
       return ["debate", "model un", "government", "newspaper", "speech"];
     case "humanities":
       return ["newspaper", "literary", "debate", "history", "journal"];
     case "creative":
-      return ["film", "newspaper", "theater", "art", "media"];
+      return ["film", "theater", "newspaper", "art", "media"];
     default:
       return ["government", "service", "club", "captain"];
   }
 }
 
-function coursePriority(profile: StudentProfile, course: string): PrioritizedOpportunity {
-  const value = course.toLowerCase();
+function activityPriority(profile: StudentProfile, activity: string): ScoredOpportunity {
   const scenario = getScenario(profile);
-  let score = 28;
+  const gap = inferBiggestGap(profile, scenario);
+  const value = activity.toLowerCase();
+  let score = 24;
+
+  for (const keyword of scenarioActivityKeywords(scenario)) {
+    if (value.includes(keyword)) score += 18;
+  }
+
+  if (/(captain|officer|editor|chair|lead|president|secretary|treasurer)/.test(value)) score += 10;
+  if (gap === "leadership" && /(captain|officer|editor|chair|lead|president|secretary|treasurer|government)/.test(value)) score += 12;
+  if (gap === "service" && /(service|key club|hospital|volunteer|hosa)/.test(value)) score += 10;
+  if (gap === "voice" && /(debate|model un|newspaper|journal|speech)/.test(value)) score += 10;
+  if (gap === "hands-on" && /(robotics|maker|engineering|science olympiad)/.test(value)) score += 10;
+  if (value.includes("nhs") && !/(officer|lead)/.test(value)) score -= 6;
+
+  const priority = rankLabel(score);
+  const rationaleByPriority: Record<Scenario, Record<typeof priority, string>> = {
+    cs: {
+      high: "Best lane for real output or technical ownership.",
+      medium: "Useful if it turns into a project or mentoring role.",
+      low: "Easy for this to stay generic.",
+    },
+    engineering: {
+      high: "Good place to build, test, or lead something tangible.",
+      medium: "Helpful if it becomes a real role, not just attendance.",
+      low: "Lower signal than stronger build work.",
+    },
+    premed: {
+      high: "Strong for service, science, or health-facing maturity.",
+      medium: "Useful if the student stays consistent inside it.",
+      low: "Less useful than stronger health or service work.",
+    },
+    business: {
+      high: "Strong for ownership, initiative, or visible leadership.",
+      medium: "Useful if it leads to results, not just membership.",
+      low: "Can read as generic unless the student does more with it.",
+    },
+    policy: {
+      high: "Strong for voice, leadership, or public-facing work.",
+      medium: "Helpful if the student contributes more than attendance.",
+      low: "Lower value unless it leads to writing, speaking, or organizing.",
+    },
+    humanities: {
+      high: "Good for writing, discussion, or intellectual depth.",
+      medium: "Worth it if the student publishes, creates, or leads.",
+      low: "Less useful than stronger writing-heavy options.",
+    },
+    creative: {
+      high: "Best case: this leads to work people can actually see.",
+      medium: "Useful if it creates output, not just involvement.",
+      low: "Weak fit unless it ties back to made work.",
+    },
+    general: {
+      high: "Good upside here. This can become a real signal.",
+      medium: "Useful if the student builds responsibility inside it.",
+      low: "Could turn into filler if it stays shallow.",
+    },
+  };
+
+  return { name: activity, priority, rationale: rationaleByPriority[scenario][priority], score };
+}
+
+function coursePriority(profile: StudentProfile, course: string): ScoredOpportunity {
+  const scenario = getScenario(profile);
+  const gap = inferBiggestGap(profile, scenario);
+  const value = course.toLowerCase();
+  let score = 26;
+
   for (const keyword of scenarioCourseKeywords(scenario)) {
     if (value.includes(keyword)) score += 18;
   }
-  if (value.includes("ap") || value.includes("ib") || value.includes("dual")) score += 14;
-  if (profile.dreamUniversities.some((school) => ["mit", "stanford", "carnegie mellon", "johns hopkins", "brown"].some((name) => school.toLowerCase().includes(name)))) {
-    if (value.includes("ap") || value.includes("ib") || value.includes("dual") || value.includes("honors")) score += 8;
-  }
+
+  if (/(ap|ib|honors|dual)/.test(value)) score += 16;
+  if (gap === "rigor" && /(ap|ib|honors|dual|calculus|statistics|chemistry|physics)/.test(value)) score += 12;
+  if (topSelectiveGoals(profile) && /(ap|ib|honors|dual)/.test(value)) score += 8;
+
   const priority = rankLabel(score);
-  const rationaleMap: Record<Scenario, Record<typeof priority, string>> = {
+  const rationaleByPriority: Record<Scenario, Record<typeof priority, string>> = {
     cs: {
-      high: "High signal for CS. Adds rigor and helps the transcript.",
+      high: "High signal for CS. Good rigor and clear relevance.",
       medium: "Helpful, especially next to projects or research.",
       low: "Fine if it matters to you, but not a top CS lever.",
     },
     engineering: {
-      high: "Strong pick for an engineering path. Good rigor.",
-      medium: "Useful support, especially with build work nearby.",
+      high: "Strong pick for engineering. Good rigor and fit.",
+      medium: "Useful support if build work is happening elsewhere.",
       low: "Lower priority than the best math and science options.",
     },
     premed: {
-      high: "Good for a pre-health transcript. Adds science depth.",
+      high: "Good pre-health rigor. This helps the transcript.",
       medium: "Helpful, but not the strongest proof on its own.",
-      low: "Lower value unless it helps balance the rest of the schedule.",
+      low: "Lower value unless it balances the rest of the schedule.",
     },
     business: {
-      high: "Good fit for business. Adds useful analytical signal.",
-      medium: "Solid support course if leadership or initiative is growing elsewhere.",
-      low: "Less useful than stronger quantitative or ownership-based choices.",
+      high: "Good business support. Adds useful analytical signal.",
+      medium: "Solid complement if ownership is growing elsewhere.",
+      low: "Less useful than stronger quant or writing choices.",
     },
     policy: {
       high: "Good for reading, writing, and policy thinking.",
-      medium: "Helpful, but it needs speaking, writing, or leadership next to it.",
+      medium: "Helpful, but it needs leadership or writing next to it.",
       low: "Lower priority unless it adds rigor or a clear angle.",
     },
     humanities: {
       high: "Strong humanities signal. Good for voice and depth.",
-      medium: "Useful, especially if it connects to writing or discussion.",
+      medium: "Useful, especially if it connects to writing.",
       low: "Less useful than the best reading and writing options.",
     },
     creative: {
-      high: "Good for craft. Gives better raw material for future work.",
-      medium: "Helpful support if the student is also making things outside class.",
+      high: "Good for craft or storytelling range.",
+      medium: "Helpful support if the student is also making work outside class.",
       low: "Not the clearest academic signal for this path.",
     },
     general: {
@@ -173,150 +308,127 @@ function coursePriority(profile: StudentProfile, course: string): PrioritizedOpp
     },
   };
 
-  return { name: course, priority, rationale: rationaleMap[scenario][priority] };
-}
-
-function activityPriority(profile: StudentProfile, activity: string): PrioritizedOpportunity {
-  const value = activity.toLowerCase();
-  const scenario = getScenario(profile);
-  let score = 26;
-  for (const keyword of scenarioActivityKeywords(scenario)) {
-    if (value.includes(keyword)) score += 18;
-  }
-  if (value.includes("government") || value.includes("captain") || value.includes("editor") || value.includes("officer")) score += 10;
-  if (profile.weaknesses.some((item) => item.toLowerCase().includes("leadership")) && /(government|officer|captain|editor|lead)/.test(value)) score += 12;
-  if (profile.weaknesses.some((item) => item.toLowerCase().includes("service")) && /(service|key club|nhs)/.test(value)) score += 8;
-  if (value.includes("nhs") && !/(officer|lead)/.test(value)) score -= 6;
-  const priority = rankLabel(score);
-
-  const rationaleMap: Record<Scenario, Record<typeof priority, string>> = {
-    cs: {
-      high: "High value here. It can lead to output, depth, or both.",
-      medium: "Worth it if it turns into a project or real responsibility.",
-      low: "Easy for this to become generic participation.",
-    },
-    engineering: {
-      high: "Good place to build, lead, or solve something real.",
-      medium: "Helpful if it becomes a real role, not just attendance.",
-      low: "Lower signal than hands-on engineering work.",
-    },
-    premed: {
-      high: "Good fit. Adds service, science, or health-facing maturity.",
-      medium: "Useful if the student sticks with it and grows inside it.",
-      low: "Less useful than science, service, or health-related work.",
-    },
-    business: {
-      high: "Strong lane for initiative, leadership, or execution.",
-      medium: "Good if it leads to ownership or visible results.",
-      low: "Can read as generic unless the student does more with it.",
-    },
-    policy: {
-      high: "Strong for voice, leadership, or civic credibility.",
-      medium: "Helpful if the student does more than show up.",
-      low: "Lower value unless it connects to writing, speaking, or organizing.",
-    },
-    humanities: {
-      high: "Good for writing, voice, or discussion depth.",
-      medium: "Worth it if the student publishes, creates, or leads.",
-      low: "Less useful than the best writing-heavy options.",
-    },
-    creative: {
-      high: "Best case: this leads to actual work people can see.",
-      medium: "Helpful if it creates output, not just membership.",
-      low: "Weak fit unless it connects back to made work.",
-    },
-    general: {
-      high: "Good upside here. This could become a real signal.",
-      medium: "Useful if the student builds responsibility inside it.",
-      low: "Could turn into resume filler if it stays shallow.",
-    },
-  };
-
-  return { name: activity, priority, rationale: rationaleMap[scenario][priority] };
+  return { name: course, priority, rationale: rationaleByPriority[scenario][priority], score };
 }
 
 function computeBreakdown(profile: StudentProfile, program: PreCollegeProgram): ScoreBreakdown {
+  const scenario = getScenario(profile);
+  const gap = inferBiggestGap(profile, scenario);
   const majorList = majorTerms(profile);
-  const weaknessTerms = normalizeWords(profile.weaknesses);
+  const studentWords = profileWords(profile);
   const desiredStyles = normalizeWords(profile.desiredStyles);
   const targetCollegeTerms = normalizeWords([...profile.dreamUniversities, ...profile.dreamPrograms]);
-  const scenario = getScenario(profile);
 
   const subjectHitCount = program.subjectAreas.filter((area) => includesAny(majorList, [area])).length;
-  const dreamProgramBoost = profile.dreamPrograms.some((name) => program.name.toLowerCase().includes(name.toLowerCase())) ? 18 : 0;
-  const schoolGapBoost =
-    profile.localResearchAvailable === false && program.styleTags.includes("research") ? 8 : 0 +
-    (profile.internshipsAvailable === false && program.styleTags.includes("internship-like") ? 6 : 0);
+  const scenarioBonus =
+    scenario === "cs" && includesAny(program.subjectAreas, ["computer science", "artificial intelligence", "data science"])
+      ? 10
+      : scenario === "engineering" && includesAny(program.subjectAreas, ["engineering", "robotics", "design"])
+        ? 10
+        : scenario === "premed" && includesAny(program.subjectAreas, ["medicine", "biology", "public health", "health"])
+          ? 10
+          : scenario === "business" && includesAny(program.subjectAreas, ["business", "entrepreneurship", "economics", "product design"])
+            ? 10
+            : scenario === "policy" && includesAny(program.subjectAreas, ["public policy", "humanities", "international relations"])
+              ? 10
+              : scenario === "humanities" && includesAny(program.subjectAreas, ["writing", "humanities", "history"])
+                ? 10
+                : scenario === "creative" && includesAny(program.subjectAreas, ["film", "media", "design", "creative writing"])
+                  ? 10
+                  : 0;
 
-  const majorAlignment = Math.min(100, 42 + subjectHitCount * 22 + (includesAny(program.tags, majorList) ? 10 : 0) + dreamProgramBoost);
+  const dreamProgramBoost = profile.dreamPrograms.some((name) => program.name.toLowerCase().includes(name.toLowerCase())) ? 16 : 0;
+  const gapBoost =
+    gap === "research" && program.styleTags.includes("research")
+      ? 14
+      : gap === "leadership" && program.styleTags.includes("leadership")
+        ? 12
+        : gap === "service" && includesAny(program.subjectAreas, ["medicine", "public health", "social impact"])
+          ? 12
+          : gap === "voice" && includesAny(program.subjectAreas, ["writing", "public policy", "humanities"])
+            ? 12
+            : gap === "hands-on" && includesAny(program.subjectAreas, ["engineering", "robotics", "design"])
+              ? 12
+              : gap === "rigor" && program.competitiveness !== "emerging"
+                ? 8
+                : 0;
+
+  const accessBoost =
+    (!profile.localResearchAvailable && program.styleTags.includes("research") ? 8 : 0) +
+    (!profile.internshipsAvailable && program.styleTags.includes("internship-like") ? 6 : 0) +
+    (profile.budgetLevel === "low" && program.costBucket === "low" ? 8 : 0);
+
+  const majorAlignment = Math.min(100, 42 + subjectHitCount * 20 + scenarioBonus + dreamProgramBoost);
   const gradeEligibility = program.gradeEligibility.includes(profile.gradeLevel) ? 100 : 18;
+
   const budgetDelta = budgetWeights[profile.budgetLevel] - budgetWeights[program.costBucket];
-  const budgetCompatibility = budgetDelta >= 0 ? 100 : Math.max(25, 82 + budgetDelta * 18);
+  const budgetCompatibility =
+    budgetDelta >= 0
+      ? Math.min(100, 88 + Math.max(0, 2 - budgetWeights[program.costBucket]) * 4)
+      : Math.max(22, 86 + budgetDelta * 22);
 
   let locationPreference = 80;
   if (profile.locationPreference === "online only") {
-    locationPreference = program.mode === "online" ? 100 : 35;
+    locationPreference = program.mode === "online" ? 100 : 32;
   } else if (profile.locationPreference !== "no strong preference") {
-    locationPreference = program.region === profile.locationPreference || program.region === "online" ? 100 : 55;
+    locationPreference = program.region === profile.locationPreference || program.region === "online" ? 100 : 56;
   }
 
-  const styleMatches = program.styleTags.filter((style) => desiredStyles.includes(style.toLowerCase())).length;
-  const stylePreference = Math.min(100, 38 + styleMatches * 22 + (desiredStyles.includes(program.mode) ? 10 : 0));
+  const stylePreference = desiredStyles.length
+    ? Math.min(100, 42 + program.styleTags.filter((style) => desiredStyles.includes(style.toLowerCase())).length * 18)
+    : program.mode === "online" && profile.budgetLevel === "low"
+      ? 88
+      : 78;
+
   const competitivenessFit =
     profile.selectivityComfort === "reach-heavy"
       ? program.competitiveness === "high"
         ? 100
         : program.competitiveness === "medium"
-          ? 84
-          : 66
+          ? 82
+          : 62
       : profile.selectivityComfort === "balanced"
         ? program.competitiveness === "medium"
           ? 100
-          : 82
+          : 84
         : program.competitiveness === "emerging"
           ? 100
-          : 74;
+          : 76;
 
-  const modePreference = desiredStyles.includes("online")
-    ? program.mode === "online"
-      ? 100
-      : 68
-    : desiredStyles.includes("on-campus residential")
-      ? program.mode === "in-person"
-        ? 100
-        : 80
-      : 84;
+  const modePreference =
+    profile.budgetLevel === "low" && program.mode === "online"
+      ? 92
+      : desiredStyles.includes("on-campus residential") && program.mode === "in-person"
+        ? 94
+        : 82;
 
   const targetCollegeRelevance = targetCollegeTerms.length
-    ? Math.min(100, 48 + program.targetCollegeSignals.filter((signal) => targetCollegeTerms.some((target) => signal.toLowerCase().includes(target))).length * 20)
-    : 70;
+    ? Math.min(
+        100,
+        46 + program.targetCollegeSignals.filter((signal) => targetCollegeTerms.some((target) => signal.toLowerCase().includes(target))).length * 18,
+      )
+    : includesAny(program.targetCollegeSignals, normalizeWords(profile.dreamUniversities))
+      ? 84
+      : 70;
 
-  const weaknessBoosts = weaknessTerms.filter((weakness) =>
-    includesAny([...program.benefits, ...program.skillsGained, ...program.tags, ...program.styleTags], [weakness]),
+  const weaknessBoosts = studentWords.filter((word) =>
+    includesAny([...program.benefits, ...program.skillsGained, ...program.tags, ...program.styleTags], [word]),
   ).length;
-  const scenarioBonus =
-    scenario === "premed" && includesAny(program.subjectAreas, ["medicine", "biology", "public health"])
-      ? 10
-      : scenario === "policy" && includesAny(program.subjectAreas, ["public policy", "humanities"])
-        ? 10
-        : scenario === "business" && includesAny(program.subjectAreas, ["business", "entrepreneurship"])
-          ? 10
-          : 0;
-  const growthOpportunity = Math.min(100, 44 + weaknessBoosts * 18 + schoolGapBoost + scenarioBonus);
+  const growthOpportunity = Math.min(100, 44 + weaknessBoosts * 10 + gapBoost + accessBoost);
 
   const minGpaPass = program.minGpa ? gpaMidpoint[profile.gpaRange] >= program.minGpa : true;
-  const gpaAdjustment = minGpaPass ? 0 : -12;
+  const gpaAdjustment = minGpaPass ? 0 : -14;
 
   const overall = Math.round(
-    majorAlignment * 0.2 +
-      gradeEligibility * 0.1 +
-      budgetCompatibility * 0.1 +
+    majorAlignment * 0.22 +
+      gradeEligibility * 0.08 +
+      budgetCompatibility * 0.12 +
       locationPreference * 0.08 +
-      stylePreference * 0.11 +
-      competitivenessFit * 0.1 +
+      stylePreference * 0.08 +
+      competitivenessFit * 0.09 +
       modePreference * 0.05 +
       targetCollegeRelevance * 0.1 +
-      growthOpportunity * 0.16 +
+      growthOpportunity * 0.18 +
       gpaAdjustment,
   );
 
@@ -335,38 +447,31 @@ function computeBreakdown(profile: StudentProfile, program: PreCollegeProgram): 
 }
 
 function summarizeStrengths(program: PreCollegeProgram, profile: StudentProfile) {
-  const items: string[] = [];
   const scenario = getScenario(profile);
-  if (program.styleTags.includes("research") && profile.weaknesses.some((item) => item.toLowerCase().includes("research"))) {
-    items.push("adds research proof");
-  }
-  if (program.styleTags.includes("leadership") && profile.weaknesses.some((item) => item.toLowerCase().includes("leadership"))) {
-    items.push("adds a clearer leadership signal");
-  }
-  if (scenario === "policy" && includesAny(program.subjectAreas, ["public policy", "humanities"])) {
-    items.push("sharpens writing and civic work");
-  }
-  if (scenario === "premed" && includesAny(program.subjectAreas, ["medicine", "biology", "public health"])) {
-    items.push("adds credible health exposure");
-  }
-  if (includesAny(program.subjectAreas, [profile.dreamMajor])) {
-    items.push(`adds real depth in ${profile.dreamMajor.toLowerCase()}`);
-  }
-  if (program.targetCollegeSignals.some((school) => profile.dreamUniversities.includes(school))) {
-    items.push("fits the current school list well");
-  }
-  if (!items.length) items.push("beats a generic enrichment option");
+  const gap = inferBiggestGap(profile, scenario);
+  const items: string[] = [];
+
+  if (gap === "research" && program.styleTags.includes("research")) items.push("adds research proof");
+  if (gap === "leadership" && program.styleTags.includes("leadership")) items.push("adds clearer leadership evidence");
+  if (gap === "hands-on" && includesAny(program.subjectAreas, ["engineering", "robotics", "design"])) items.push("adds hands-on depth");
+  if (gap === "voice" && includesAny(program.subjectAreas, ["public policy", "writing", "humanities"])) items.push("sharpens writing and public voice");
+  if (gap === "service" && includesAny(program.subjectAreas, ["health", "public health", "medicine"])) items.push("adds service or health exposure");
+  if (includesAny(program.subjectAreas, [profile.dreamMajor])) items.push(`builds depth in ${profile.dreamMajor.toLowerCase()}`);
+  if (profile.budgetLevel === "low" && program.costBucket === "low") items.push("keeps cost manageable");
+  if (!items.length) items.push("turns interest into something concrete");
+
   return items.slice(0, 3);
 }
 
-function buildHighlights(score: ScoreBreakdown) {
-  const highlights = [];
+function buildHighlights(score: ScoreBreakdown, program: PreCollegeProgram, profile: StudentProfile) {
+  const highlights: string[] = [];
   if (score.majorAlignment >= 88) highlights.push("Strong major fit");
   if (score.budgetCompatibility >= 88) highlights.push("Budget works");
   if (score.growthOpportunity >= 84) highlights.push("Closes a real gap");
-  if (score.targetCollegeRelevance >= 84) highlights.push("Good for this school list");
-  if (!highlights.length) highlights.push("Balanced option");
-  return highlights;
+  if (profile.budgetLevel === "low" && program.mode === "online") highlights.push("Easy to access");
+  if (topSelectiveGoals(profile) && score.targetCollegeRelevance >= 82) highlights.push("Useful for this school list");
+  if (!highlights.length) highlights.push("Worth a closer look");
+  return highlights.slice(0, 3);
 }
 
 function createImpactAreas(profile: StudentProfile, program: PreCollegeProgram) {
@@ -387,244 +492,166 @@ function createImpactAreas(profile: StudentProfile, program: PreCollegeProgram) 
 
 function buildStrategicSummary(profile: StudentProfile): StrategicSummary {
   const scenario = getScenario(profile);
+  const gap = inferBiggestGap(profile, scenario);
   const strongestAssets = [...profile.strengths.slice(0, 2), ...(profile.projectsAwardsCompetitions.length ? [profile.projectsAwardsCompetitions[0]] : [])].slice(0, 3);
   const biggestGaps = profile.weaknesses.slice(0, 3);
+
   const focusMap: Record<Scenario, string[]> = {
-    cs: [
-      "Back CS with real rigor, not just general STEM interest.",
-      "Go deep in one build or research lane.",
-      "Use summer to add proof the school year cannot.",
-    ],
-    engineering: [
-      "Prioritize math, science, and build work.",
-      "Show that you make, test, or fix things.",
-      "Keep the story grounded in projects.",
-    ],
-    premed: [
-      "Pair science rigor with service or health exposure.",
-      "Avoid a profile that is all classes and no context.",
-      "Let essays show maturity, not just good intentions.",
-    ],
-    business: [
-      "Show initiative, not just interest.",
-      "Pick roles with visible ownership.",
-      "Use summer to launch, test, or lead something.",
-    ],
-    policy: [
-      "Let writing and civic voice lead.",
-      "Choose work that is public-facing or judgment-heavy.",
-      "Keep the college list focused on fit, not just prestige.",
-    ],
-    humanities: [
-      "Lean into reading, writing, and thoughtfulness.",
-      "Depth beats generic well-roundedness.",
-      "Pick summer options that add voice or research.",
-    ],
-    creative: [
-      "Make work people can actually see.",
-      "Choose output over broad participation.",
-      "Let voice show up across the whole profile.",
-    ],
-    general: [
-      "Choose fewer priorities.",
-      "Build depth in one main lane.",
-      "Use summer to fix a real gap.",
-    ],
+    cs: ["Back CS with real rigor.", "Go deep in one technical lane.", "Use summer to add proof."],
+    engineering: ["Prioritize math, science, and build work.", "Show how you make or fix things.", "Keep the story grounded in projects."],
+    premed: ["Pair science with service or health exposure.", "Avoid a profile that is only classroom-based.", "Use essays to show maturity."],
+    business: ["Show initiative, not just interest.", "Pick roles with visible ownership.", "Use summer to build or lead something."],
+    policy: ["Let writing and civic voice lead.", "Choose work that is public-facing.", "Keep the list grounded in fit."],
+    humanities: ["Lean into reading, writing, and voice.", "Depth beats generic breadth.", "Pick summer options that add intellectual signal."],
+    creative: ["Make work people can see.", "Choose output over broad participation.", "Let voice show up across the profile."],
+    general: ["Choose fewer priorities.", "Build depth in one lane.", "Use summer to fix a real gap."],
+  };
+
+  const gapLabel: Record<GapKey, string> = {
+    rigor: "rigor",
+    research: "research depth",
+    leadership: "leadership ownership",
+    service: "service or health exposure",
+    voice: "voice and writing signal",
+    "hands-on": "hands-on proof",
+    direction: "clear direction",
   };
 
   return {
-    profileSnapshot: `${profile.gradeLevel}th grade, aiming at ${profile.dreamMajor}. Strongest sign so far: ${profile.strengths[0] || "clear upside"}. Biggest job now: make the profile feel sharper and more specific.`,
-    strongestAssets: strongestAssets.length ? strongestAssets : ["Clear upside, but the best strengths still need to show up more clearly."],
-    biggestGaps: biggestGaps.length ? biggestGaps : ["The profile needs clearer priorities and better differentiation."],
+    profileSnapshot: `${profile.gradeLevel}th grade, aiming at ${profile.dreamMajor || "a focused college path"}. Biggest job now: tighten the profile around ${gapLabel[gap]}.`,
+    strongestAssets: strongestAssets.length ? strongestAssets : ["Clear upside, but the strongest assets still need to show up more clearly."],
+    biggestGaps: biggestGaps.length ? biggestGaps : [`The profile needs more ${gapLabel[gap]}.`],
     whatMattersMost: focusMap[scenario],
-    recommendedDirection: `Use the best school options first. Then add one summer move that closes the biggest gap. Do not try to optimize for everything at once.`,
+    recommendedDirection: "Use the best school-based options first. Then add one summer move that fills the biggest remaining gap.",
   };
 }
 
-function buildSchoolOpportunityStrategy(profile: StudentProfile): SchoolOpportunityStrategy {
-  const sortedCourses = profile.coursesAvailable.map((course) => coursePriority(profile, course)).sort((a, b) => ({ high: 3, medium: 2, low: 1 }[b.priority] - { high: 3, medium: 2, low: 1 }[a.priority]));
-  const sortedActivities = profile.clubsAvailable.map((club) => activityPriority(profile, club)).sort((a, b) => ({ high: 3, medium: 2, low: 1 }[b.priority] - { high: 3, medium: 2, low: 1 }[a.priority]));
+function buildSchoolOpportunityStrategy(profile: StudentProfile, matches: Omit<MatchResult, "ai">[]): SchoolOpportunityStrategy {
+  const scoredCourses = profile.coursesAvailable.map((course) => coursePriority(profile, course)).sort((a, b) => b.score - a.score);
+  const scoredActivities = profile.clubsAvailable.map((club) => activityPriority(profile, club)).sort((a, b) => b.score - a.score);
   const scenario = getScenario(profile);
+  const gap = inferBiggestGap(profile, scenario);
+  const topProgram = matches[0]?.program.name || "a strong-fit summer option";
+
   const leadershipFocusMap: Record<Scenario, string[]> = {
-    cs: [
-      `Lead where you can build, mentor, or ship something. Best lane: ${profile.leadershipOpportunities[0] || "a technical club"}.`,
-      "A title without output is not enough here.",
-    ],
-    engineering: [
-      `Pick a role tied to making or execution, like ${profile.leadershipOpportunities[0] || "a build-oriented activity"}.`,
-      "Hands-on leadership beats admin-only titles.",
-    ],
-    premed: [
-      `Look for leadership where service or health responsibility is visible, like ${profile.leadershipOpportunities[0] || "a science or service role"}.`,
-      "The best version here looks dependable and people-facing.",
-    ],
-    business: [
-      `Choose a role where you can organize, pitch, launch, or influence outcomes through ${profile.leadershipOpportunities[0] || "one execution-heavy lane"}.`,
-      "Outcome-oriented leadership wins here.",
-    ],
-    policy: [
-      `Pick leadership that makes speaking, writing, or organizing visible through ${profile.leadershipOpportunities[0] || "a public-facing role"}.`,
-      "Voice and responsibility matter more than title count.",
-    ],
-    humanities: [
-      "Look for editorial, discussion, or community-facing leadership.",
-      "One strong lane beats scattered involvement.",
-    ],
-    creative: [
-      "Lead where you can shape output, direct work, or present something publicly.",
-      "The work matters more than the title.",
-    ],
-    general: [
-      `Use ${profile.leadershipOpportunities[0] || "one meaningful role"} as the main leadership lane.`,
-      "Depth and visible responsibility matter more than more titles.",
-    ],
+    cs: [`Aim for visible ownership in ${profile.leadershipOpportunities[0] || "a technical club"}.`, "A title without output is not enough here."],
+    engineering: [`Pick a role tied to building or execution, like ${profile.leadershipOpportunities[0] || "a build-oriented activity"}.`, "Hands-on leadership matters more than admin work."],
+    premed: [`Look for leadership where service or health responsibility is visible, like ${profile.leadershipOpportunities[0] || "a science or service role"}.`, "Dependability counts more than title count."],
+    business: [`Choose a role where you can organize, launch, or influence outcomes through ${profile.leadershipOpportunities[0] || "one clear lane"}.`, "Ownership is the point."],
+    policy: [`Pick leadership that makes speaking, writing, or organizing visible through ${profile.leadershipOpportunities[0] || "a public-facing role"}.`, "Voice and judgment matter more than titles."],
+    humanities: ["Look for editorial, discussion, or community-facing leadership.", "One strong lane beats scattered involvement."],
+    creative: ["Lead where you can shape output or present work publicly.", "The work matters more than the title."],
+    general: [`Use ${profile.leadershipOpportunities[0] || "one meaningful role"} as the main leadership lane.`, "Depth and visible responsibility matter more than more titles."],
   };
 
-  const lowValueAvailable = sortedActivities.filter((item) => item.priority === "low").slice(0, 2).map((item) => item.name);
+  const lowValueAvailable = scoredActivities.filter((item) => item.priority === "low").slice(0, 2).map((item) => item.name);
   const deprioritize = lowValueAvailable.length
-    ? lowValueAvailable.map((name) => `${name}: fine as a side activity. Not where most time should go.`)
-    : ["Generic membership without output.", "Anything that pulls time from stronger priorities."];
+    ? lowValueAvailable.map((name) => `${name}: fine as a side activity, but not where most energy should go.`)
+    : ["Generic membership without output.", "Anything that pulls time away from stronger priorities."];
 
-  const gapClosure = [];
-  if (profile.weaknesses.some((item) => item.toLowerCase().includes("research"))) {
-    gapClosure.push(
-      profile.localResearchAvailable
-        ? "Ask teachers, local mentors, or nearby labs about a small research-style project."
-        : "No local research access. Use summer options or a self-run question that leads to something concrete."
-    );
-  }
-  if (profile.weaknesses.some((item) => item.toLowerCase().includes("leadership"))) {
-    gapClosure.push(`Use ${profile.leadershipOpportunities[0] || "one school-based role"} to fix the leadership gap now.`);
-  }
-  if (profile.internshipsAvailable) {
-    gapClosure.push("Only chase internships if they beat the best school options on fit.");
-  } else {
-    gapClosure.push("If internships are not realistic, lean harder on school opportunities and summer plans.");
-  }
-  if (!gapClosure.length) {
-    gapClosure.push("Tie school rigor, one strong activity lane, and one summer move into a cleaner story.");
-  }
+  const topCourse = scoredCourses[0]?.name || "your strongest course option";
+  const topActivity = scoredActivities[0]?.name || "one higher-signal activity";
+  const externalMove =
+    profile.internshipsAvailable
+      ? "Try one local internship or shadowing lead if it beats the best school option."
+      : profile.localResearchAvailable
+        ? "Ask a teacher or local mentor about a small research-style project."
+        : "Use an online or community-based option to add outside proof.";
+
+  const gapOpeners: Record<GapKey, string> = {
+    rigor: `At school: prioritize ${topCourse} and protect time for it.`,
+    research: `At school: use ${topCourse} as the base and look for independent study or mentor-led work.`,
+    leadership: `At school: turn ${topActivity} into a real ownership lane.`,
+    service: `At school: build around ${topActivity} and stay consistent.`,
+    voice: `At school: lean into ${topActivity} and produce something public.`,
+    "hands-on": `At school: use ${topActivity} to make or build something real.`,
+    direction: `At school: center the year around ${topCourse} and ${topActivity}.`,
+  };
 
   return {
-    priorityCourses: sortedCourses,
-    priorityActivities: sortedActivities,
+    priorityCourses: scoredCourses.map(({ name, priority, rationale }) => ({ name, priority, rationale })),
+    priorityActivities: scoredActivities.map(({ name, priority, rationale }) => ({ name, priority, rationale })),
     leadershipFocus: leadershipFocusMap[scenario],
     deprioritize,
-    gapClosure,
+    gapClosure: [gapOpeners[gap], `Outside school: ${externalMove}`, `Summer: keep ${topProgram} near the top of the list.`],
   };
 }
 
 function buildTestingStrategy(profile: StudentProfile): TestingStrategy {
   const scenario = getScenario(profile);
-  const eliteTargets = profile.dreamUniversities.filter((school) => COLLEGES.some((college) => college.name.toLowerCase() === school.toLowerCase() && college.selectivity === "ultra"));
-  const testingSensitive = profile.dreamUniversities.some((school) =>
-    COLLEGES.some((college) => college.name.toLowerCase() === school.toLowerCase() && (college.testing === "important" || college.testing === "helpful")),
+  const selectiveTargets = profile.dreamUniversities.filter((school) =>
+    COLLEGES.some((college) => college.name.toLowerCase() === school.toLowerCase() && selectivityWeights[college.selectivity] >= 3),
   );
-  const highGpa = gpaMidpoint[profile.gpaRange] >= 3.7;
+  const testingSensitive = profile.dreamUniversities.some((school) =>
+    COLLEGES.some((college) => college.name.toLowerCase() === school.toLowerCase() && college.testing !== "optional"),
+  );
 
   let recommendation = "";
-  let whyItMatters = "";
-
   if (profile.testSituation === "SAT taken" || profile.testSituation === "ACT taken") {
-    recommendation =
-      profile.testingConfidence === "low"
-        ? "Retest only if the current score is clearly holding this list back."
-        : "Use the current score unless a retake has real upside.";
-  } else if (testingSensitive && (eliteTargets.length > 0 || highGpa)) {
-    recommendation = "Worth taking seriously. A strong score could help this list.";
-  } else if (!testingSensitive && profile.testingConfidence === "low") {
-    recommendation = "Test-optional is reasonable if the rest of the profile gets stronger.";
+    recommendation = profile.testingConfidence === "low" ? "Retest only if the score is clearly holding this list back." : "Use the current score unless a retake has real upside.";
+  } else if (testingSensitive && selectiveTargets.length > 0) {
+    recommendation = "Take one real shot. A strong score could help this list.";
+  } else if (profile.testingConfidence === "low") {
+    recommendation = "Test-optional is fine if the rest of the profile gets sharper.";
   } else {
-    recommendation = "Take one real shot, then decide if scores are helping.";
+    recommendation = "Try one diagnostic, then decide if testing is worth the time.";
   }
 
   const whyMap: Record<Scenario, string> = {
-    cs: "For CS, a good score can back up quantitative readiness.",
-    engineering: "For engineering, scores help most when math rigor is central to the story.",
-    premed: "For pre-health goals, testing helps only if the science profile is already solid.",
-    business: "Testing matters only if it adds clear analytical strength.",
+    cs: "For CS, scores help most when they back up quant readiness.",
+    engineering: "For engineering, they help when math rigor is a big part of the case.",
+    premed: "For pre-med, testing helps only if the science profile is already solid.",
+    business: "For business, it matters only if it adds clear academic signal.",
     policy: "Do not let test prep crowd out writing or leadership work.",
-    humanities: "Here, voice and writing usually matter more than scores.",
+    humanities: "Here, voice and writing often matter more than scores.",
     creative: "For creative paths, scores are rarely the main differentiator.",
-    general: "Scores help only if they clearly improve the overall case.",
+    general: "Scores help only if they clearly improve the case.",
   };
-  whyItMatters = whyMap[scenario];
 
   const plan = [
-    profile.testSituation === "no SAT/ACT yet" ? "Take one diagnostic and pick the better test." : "Check whether the current score is actually helping this list.",
-    profile.testingConfidence === "low" ? "Use a short prep plan, not endless retakes." : "Tie prep to one or two real test dates.",
-    eliteTargets.length > 0 ? "Be honest about whether extra prep time is worth it for the reach schools." : "If testing starts stealing time from better profile work, pull back.",
+    profile.testSituation === "no SAT/ACT yet" ? "Take one diagnostic and pick the better test." : "Check whether the current score is actually helping.",
+    profile.testingConfidence === "low" ? "Use a short prep block, not endless retakes." : "Tie prep to one or two real dates.",
+    selectiveTargets.length > 0 ? "Be honest about whether more prep time is worth it for the reach schools." : "If prep starts stealing time from better profile work, pull back.",
   ];
 
   const testOptionalView =
-    testingSensitive && eliteTargets.length > 0
-      ? "Test-optional is still possible, but the rest of the application needs to be sharp."
-      : "Test-optional is fine here if classes, activities, and essays carry the case.";
+    testingSensitive && selectiveTargets.length > 0
+      ? "Test-optional is still possible, but the rest of the profile needs to be sharp."
+      : "Test-optional is reasonable here if classes, activities, and essays carry the case.";
 
-  return { recommendation, whyItMatters, plan, testOptionalView };
+  return { recommendation, whyItMatters: whyMap[scenario], plan, testOptionalView };
 }
 
 function buildEssayStrategy(profile: StudentProfile): EssayStrategy {
   const scenario = getScenario(profile);
-  const themes = [...profile.personalStatementThemes, ...profile.majorExperiences].slice(0, 5);
+  const themes = [...profile.personalStatementThemes, ...profile.majorExperiences].slice(0, 3);
+
   const themeFallbacks: Record<Scenario, string[]> = {
-    cs: ["building something useful for others", "moving from curiosity to disciplined problem-solving", "finding confidence through making"],
-    engineering: ["learning by building and fixing", "turning frustration into design thinking", "being the person who likes solving tangible problems"],
-    premed: ["witnessing care up close", "service that changed how responsibility feels", "learning empathy under pressure"],
-    business: ["spotting problems and acting on them", "leading through execution", "learning how ideas become outcomes"],
-    policy: ["finding a public voice", "advocacy shaped by lived experience", "leadership through writing or speaking"],
-    humanities: ["intellectual curiosity that changed perspective", "voice shaped by reading or writing", "making meaning from complexity"],
+    cs: ["building something useful for other people", "moving from curiosity to disciplined problem-solving", "finding confidence through making"],
+    engineering: ["learning by building and fixing", "turning frustration into design thinking", "becoming the person who solves practical problems"],
+    premed: ["watching care up close", "service that changed what responsibility means", "learning empathy under pressure"],
+    business: ["spotting problems and acting on them", "learning to lead through execution", "finding confidence through ownership"],
+    policy: ["finding a public voice", "advocacy shaped by lived experience", "speaking up in community spaces"],
+    humanities: ["an idea that changed perspective", "voice shaped by reading or writing", "making meaning from complexity"],
     creative: ["creating work as a way of understanding identity", "storytelling as agency", "finding style through experimentation"],
-    general: ["a turning point that clarified direction", "growth through responsibility", "voice shaped by a meaningful challenge"],
+    general: ["a turning point that clarified direction", "growth through responsibility", "voice shaped by a real challenge"],
   };
 
-  const narrativeDirectionsMap: Record<Scenario, string[]> = {
-    cs: [
-      "Start with one build, bug, or question that hooked you.",
-      "Tie technical interest to usefulness, not just fascination.",
-      "Show the jump from tinkering to ownership.",
-    ],
-    engineering: [
-      "Anchor the story in building, testing, or fixing something.",
-      "Show how you think through constraints.",
-      "Connect hard classes to real problem-solving.",
-    ],
-    premed: [
-      "Skip the generic 'I want to help people' essay.",
-      "Focus on one moment that changed how you see care or responsibility.",
-      "Let science and service connect naturally.",
-    ],
-    business: [
-      "Build the story around initiative and ownership.",
-      "Make leadership feel earned through execution.",
-      "Use concrete choices, tradeoffs, and results.",
-    ],
-    policy: [
-      "Lead with voice, judgment, or one public question that became personal.",
-      "Use writing, speaking, or civic work to make it feel alive.",
-      "Show thought, not just opinion.",
-    ],
-    humanities: [
-      "Center the essay on one idea or tension that stayed with you.",
-      "Use scenes and reflection, not a list of books or classes.",
-      "Keep the voice precise and personal.",
-    ],
-    creative: [
-      "Show how making work changed the way you see things.",
-      "Let process and risk matter more than passion statements.",
-      "Use detail so the voice shows up fast.",
-    ],
-    general: [
-      "Choose a story that shows values and direction.",
-      "Use scenes and decisions, not abstract traits.",
-      "Make the essay connect to the rest of the application.",
-    ],
+  const strongDirections: Record<Scenario, string[]> = {
+    cs: ["Start with one build, bug, or question that hooked you.", "Show the jump from tinkering to ownership."],
+    engineering: ["Anchor the story in building, testing, or fixing something.", "Show how you think through constraints."],
+    premed: ["Skip the generic 'I want to help people' essay.", "Focus on one moment that changed how you see care."],
+    business: ["Build the story around initiative and ownership.", "Use concrete choices, tradeoffs, and results."],
+    policy: ["Lead with voice, judgment, or one public question that became personal.", "Use writing or civic work to make it feel alive."],
+    humanities: ["Center the essay on one idea or tension that stayed with you.", "Use scenes and reflection, not a list of books or classes."],
+    creative: ["Show how making work changed the way you see things.", "Let process and risk matter more than passion statements."],
+    general: ["Choose a story that shows values and direction.", "Use scenes and decisions, not abstract traits."],
   };
 
-  const genericVsDistinctive = [
-    "Avoid: broad essays about loving learning, leading, or helping people.",
+  const keepInMind = [
+    "Avoid broad essays about loving learning or helping people.",
     "Better: one story with a real decision, scene, or consequence.",
-    `Best: an essay that points toward ${profile.dreamMajor.toLowerCase()} without reading like a resume.`,
+    `Best: an essay that points toward ${profile.dreamMajor.toLowerCase()} without sounding like a resume.`,
   ];
 
   const nextSteps = [
@@ -635,25 +662,32 @@ function buildEssayStrategy(profile: StudentProfile): EssayStrategy {
 
   return {
     promisingThemes: themes.length ? themes : themeFallbacks[scenario],
-    narrativeDirections: narrativeDirectionsMap[scenario],
-    genericVsDistinctive,
+    narrativeDirections: strongDirections[scenario],
+    genericVsDistinctive: keepInMind,
     nextSteps,
   };
 }
 
+function profileStrengthLevel(profile: StudentProfile) {
+  const gpaScore = gpaMidpoint[profile.gpaRange] >= 3.9 ? 4 : gpaMidpoint[profile.gpaRange] >= 3.7 ? 3.4 : gpaMidpoint[profile.gpaRange] >= 3.4 ? 2.8 : gpaMidpoint[profile.gpaRange] >= 3.1 ? 2.2 : 1.7;
+  const rigorScore = Math.min(0.7, advancedCourseCount(profile) * 0.16);
+  const depthScore = Math.min(0.6, projectDepth(profile) * 0.12 + leadershipDepth(profile) * 0.08);
+  return gpaScore + rigorScore + depthScore;
+}
+
 function schoolFitReason(college: (typeof COLLEGES)[number], profile: StudentProfile) {
   const scenario = getScenario(profile);
-  const phrases: Record<Scenario, string> = {
-    cs: "a student building real technical depth",
-    engineering: "an engineering path with rigor and hands-on work",
-    premed: "a science-and-service profile",
-    business: "a student growing initiative and analytical skill",
-    policy: "a profile built around writing, voice, and civic work",
-    humanities: "a student with strong intellectual voice",
-    creative: "a path built on output and creative identity",
-    general: "the current goals and profile",
+  const scenarioPhrases: Record<Scenario, string> = {
+    cs: "technical depth",
+    engineering: "hands-on rigor",
+    premed: "science and pre-health support",
+    business: "initiative and applied learning",
+    policy: "writing, leadership, and public service",
+    humanities: "voice, reading, and discussion",
+    creative: "output and creative identity",
+    general: "fit with the current goals",
   };
-  return `Good fit for ${phrases[scenario]}. Strong on ${college.vibes.join(", ")}.`;
+  return `Good fit for ${scenarioPhrases[scenario]}. Strong on ${college.vibes.slice(0, 2).join(" and ")}.`;
 }
 
 function collegeReason(college: (typeof COLLEGES)[number], bucket: "reach" | "target" | "safety", profile: StudentProfile): CollegeRecommendation {
@@ -662,29 +696,46 @@ function collegeReason(college: (typeof COLLEGES)[number], bucket: "reach" | "ta
       ? "High bar, but the fit is real."
       : bucket === "target"
         ? "Realistic if the next year gets sharper."
-        : "More attainable, still strong for this path.";
+        : "More attainable, still useful for this path.";
   return { name: college.name, reasoning: `${base} ${schoolFitReason(college, profile)}` };
 }
 
 function buildCollegeListStrategy(profile: StudentProfile): CollegeListStrategy {
   const scenario = getScenario(profile);
   const regionPref = profile.locationPreference === "no strong preference" ? null : profile.locationPreference;
-  const ranked = COLLEGES
-    .map((college) => {
-      let score = 20;
-      if (includesAny(college.majors, [profile.dreamMajor])) score += 30;
-      if (profile.dreamUniversities.some((name) => name.toLowerCase() === college.name.toLowerCase())) score += 35;
-      if (regionPref && college.region === regionPref) score += 10;
-      if (scenario === "policy" && includesAny(college.vibes, ["writing", "leadership", "public service", "discussion"])) score += 12;
-      if (scenario === "premed" && includesAny(college.vibes, ["research", "pre-health", "science", "service"])) score += 12;
-      if (scenario === "business" && includesAny(college.vibes, ["initiative", "co-op", "career clarity", "applied learning"])) score += 12;
-      if (scenario === "creative" && includesAny(college.vibes, ["portfolio", "voice", "output", "style"])) score += 12;
-      return { college, score };
-    })
-    .sort((a, b) => b.score - a.score);
+  const ranked = COLLEGES.map((college) => {
+    let score = 24;
+
+    if (includesAny(college.majors, [profile.dreamMajor])) score += 34;
+    if (profile.dreamUniversities.some((name) => name.toLowerCase() === college.name.toLowerCase())) score += 28;
+    if (regionPref && college.region === regionPref) score += 10;
+    if (profile.budgetLevel === "low" && includesAny(college.vibes, ["value", "public", "co-op"])) score += 8;
+    if (profile.testSituation === "not planning yet" && college.testing === "optional") score += 6;
+    if (gpaMidpoint[profile.gpaRange] < 3.5 && college.selectivity === "ultra") score -= 8;
+    if (gpaMidpoint[profile.gpaRange] >= 3.9 && college.bucket === "reach") score += 4;
+    if (scenario === "cs" && includesAny(college.majors, ["computer science", "data science"])) score += 10;
+    if (scenario === "engineering" && includesAny(college.majors, ["engineering", "biomedical engineering"])) score += 10;
+    if (scenario === "premed" && includesAny(college.majors, ["biology", "medicine", "public health", "neuroscience"])) score += 10;
+    if (scenario === "business" && includesAny(college.majors, ["business", "economics", "entrepreneurship"])) score += 10;
+    if (scenario === "policy" && includesAny(college.majors, ["public policy", "international relations", "political science"])) score += 10;
+    if (scenario === "humanities" && includesAny(college.majors, ["humanities", "history", "creative writing", "english"])) score += 10;
+    if (scenario === "creative" && includesAny(college.majors, ["film", "media", "design", "creative writing"])) score += 10;
+    if (scenario === "cs" && includesAny(college.vibes, ["technical depth", "problem solving", "maker", "innovation"])) score += 12;
+    if (scenario === "engineering" && includesAny(college.vibes, ["hands-on", "maker", "technical rigor", "applied learning"])) score += 12;
+    if (scenario === "premed" && includesAny(college.vibes, ["pre-health", "research", "service", "science"])) score += 12;
+    if (scenario === "business" && includesAny(college.vibes, ["co-op", "initiative", "applied learning", "career focus", "value"])) score += 12;
+    if (scenario === "policy" && includesAny(college.vibes, ["policy", "public service", "writing", "discussion", "city access"])) score += 12;
+    if (scenario === "humanities" && includesAny(college.vibes, ["writing", "discussion", "intellectual voice", "academic seriousness"])) score += 12;
+    if (scenario === "creative" && includesAny(college.vibes, ["portfolio", "style", "output", "creative practice"])) score += 12;
+
+    return { college, score };
+  }).sort((a, b) => b.score - a.score);
 
   function pick(bucket: "reach" | "target" | "safety", count: number) {
-    return ranked.filter((item) => item.college.bucket === bucket).slice(0, count).map((item) => collegeReason(item.college, bucket, profile));
+    return ranked
+      .filter((item) => item.college.bucket === bucket)
+      .slice(0, count)
+      .map((item) => collegeReason(item.college, bucket, profile));
   }
 
   return {
@@ -694,39 +745,46 @@ function buildCollegeListStrategy(profile: StudentProfile): CollegeListStrategy 
   };
 }
 
+function buildCollegeDirection(profile: StudentProfile, colleges: CollegeListStrategy) {
+  const regionPref = profile.locationPreference === "no strong preference" ? "mixed" : profile.locationPreference;
+  if (profile.budgetLevel === "low") {
+    return `Keep the reaches, but lean on value-heavy ${regionPref === "mixed" ? "targets" : `${regionPref} targets`} and clear safeties.`;
+  }
+  if (profile.selectivityComfort === "reach-heavy") {
+    return "Keep a few ambitious reaches, but do not skip grounded targets.";
+  }
+  if (gpaMidpoint[profile.gpaRange] < 3.5) {
+    return `Stay balanced. Let ${colleges.target[0]?.name || "your targets"} and ${colleges.safety[0]?.name || "your safeties"} do real work.`;
+  }
+  return `Build around fit-first targets like ${colleges.target[0]?.name || "your top target"} and one or two steadier safeties.`;
+}
+
 function buildActionPlan(profile: StudentProfile, school: SchoolOpportunityStrategy, matches: Omit<MatchResult, "ai">[]): ActionPlan {
   const scenario = getScenario(profile);
-  const bestProgram = matches[0]?.program.name || "a strong-fit summer program";
-  const topCourse = school.priorityCourses.find((course) => course.priority === "high")?.name || "your highest-rigor available coursework";
-  const topActivity = school.priorityActivities.find((activity) => activity.priority === "high")?.name || "one high-signal activity";
-  const scenarioSummer = {
-    cs: "build or ship something visible",
-    engineering: "design, prototype, or document a project",
-    premed: "combine science with service or health exposure",
+  const topCourse = school.priorityCourses[0]?.name || "your strongest course option";
+  const topActivity = school.priorityActivities[0]?.name || "one high-signal activity";
+  const topProgram = matches[0]?.program.name || "a strong-fit summer option";
+
+  const summerMove: Record<Scenario, string> = {
+    cs: "ship something visible",
+    engineering: "build or document a real project",
+    premed: "pair science with health or service exposure",
     business: "launch, lead, or test an initiative",
     policy: "write, speak, or organize around a public question",
     humanities: "produce thoughtful writing or research",
-    creative: "finish and present actual creative work",
-    general: "create one visible artifact that adds depth",
-  }[scenario];
+    creative: "finish work people can actually see",
+    general: "come out with one concrete artifact",
+  };
 
   return {
-    thisSemester: [
-      `Prioritize ${topCourse}.`,
-      `Put more energy into ${topActivity}.`,
-      `Pick one main gap to fix first: ${profile.weaknesses[0] || "clarity, depth, or direction"}.`,
-    ],
-    thisSummer: [
-      `Pursue ${bestProgram} or a similar option.`,
-      `Use the summer to ${scenarioSummer}.`,
-      "Come out of summer with something concrete to show.",
-    ],
-    biggestFirstPriority: `Build a cleaner ${profile.dreamMajor.toLowerCase()} story through rigor, one focused activity lane, and one strong summer step.`,
+    thisSemester: [`Prioritize ${topCourse}.`, `Put more energy into ${topActivity}.`, `Fix the biggest gap before adding new low-signal commitments.`],
+    thisSummer: [`Keep ${topProgram} near the top of the list.`, `Use the summer to ${summerMove[scenario]}.`, "Come out of summer with something concrete to show."],
+    biggestFirstPriority: `Build a clearer ${profile.dreamMajor.toLowerCase()} story through rigor, one focused activity lane, and one strong summer move.`,
     milestones: [
-      "Course registration and rigor decisions",
-      "Leadership applications or role-selection timelines",
+      "Course registration and final schedule decisions",
+      "Leadership applications or officer timelines",
       "Summer program and scholarship deadlines",
-      profile.testSituation === "not planning yet" || profile.testSituation === "no SAT/ACT yet" ? "Testing decision checkpoint" : "Testing score/retest checkpoint",
+      profile.testSituation === "no SAT/ACT yet" || profile.testSituation === "not planning yet" ? "Testing decision checkpoint" : "Score or retest checkpoint",
     ],
     fallbackOptions: [
       "If cost blocks the first-choice program, pair a lower-cost option with a self-directed project.",
@@ -736,13 +794,60 @@ function buildActionPlan(profile: StudentProfile, school: SchoolOpportunityStrat
   };
 }
 
+function buildAtGlanceSummary(
+  profile: StudentProfile,
+  strategicSummary: StrategicSummary,
+  school: SchoolOpportunityStrategy,
+  matches: Omit<MatchResult, "ai">[],
+  testing: TestingStrategy,
+  colleges: CollegeListStrategy,
+): AtAGlanceSummary {
+  const scenario = getScenario(profile);
+  const gap = inferBiggestGap(profile, scenario);
+  const topCourse = school.priorityCourses[0]?.name || "your top course";
+  const topActivity = school.priorityActivities[0]?.name || "your top activity";
+  const topProgram = matches[0];
+
+  const moveByGap: Record<GapKey, string> = {
+    rigor: `Protect ${topCourse} and treat rigor as the main school-year job.`,
+    research: `Use ${topCourse} as the base, then add one real research step.`,
+    leadership: `Turn ${topActivity} into a clear leadership lane.`,
+    service: `Build around ${topActivity} and stay consistent.`,
+    voice: `Use ${topActivity} to create something public and specific.`,
+    "hands-on": `Center the plan on ${topActivity} and one build-heavy summer option.`,
+    direction: strategicSummary.recommendedDirection,
+  };
+
+  const gapText: Record<GapKey, string> = {
+    rigor: "Rigor still needs to rise.",
+    research: "There is not enough research or independent academic proof yet.",
+    leadership: "Leadership is still too light or too title-based.",
+    service: "The service or health side still needs real depth.",
+    voice: "The application still needs a clearer writing or civic voice.",
+    "hands-on": "There is not enough hands-on proof yet.",
+    direction: "The profile needs a tighter central lane.",
+  };
+
+  const strongestSchoolOpportunity =
+    gap === "leadership" || gap === "service" || gap === "voice" || gap === "hands-on" ? topActivity : topCourse;
+
+  return {
+    bestNextMove: moveByGap[gap],
+    biggestGap: gapText[gap],
+    strongestSchoolOpportunity,
+    bestFitSummerOption: topProgram ? `${topProgram.program.name} — ${topProgram.reasoningHighlights[0].toLowerCase()}.` : "No summer option picked yet.",
+    testingStance: testing.recommendation,
+    collegeDirection: buildCollegeDirection(profile, colleges),
+  };
+}
+
 export function getMatches(profile: StudentProfile): Omit<MatchResult, "ai">[] {
   return PROGRAMS.map((program) => {
     const score = computeBreakdown(profile, program);
     return {
       program,
       score,
-      reasoningHighlights: buildHighlights(score),
+      reasoningHighlights: buildHighlights(score, program, profile),
       strengthensProfile: summarizeStrengths(program, profile),
       impactAreas: createImpactAreas(profile, program),
     };
@@ -750,13 +855,20 @@ export function getMatches(profile: StudentProfile): Omit<MatchResult, "ai">[] {
 }
 
 export function buildCounselorInsights(profile: StudentProfile, matches: Omit<MatchResult, "ai">[]): CounselorInsights {
-  const schoolOpportunityStrategy = buildSchoolOpportunityStrategy(profile);
+  const schoolOpportunityStrategy = buildSchoolOpportunityStrategy(profile, matches);
+  const testingStrategy = buildTestingStrategy(profile);
+  const essayStrategy = buildEssayStrategy(profile);
+  const collegeListStrategy = buildCollegeListStrategy(profile);
+  const strategicSummary = buildStrategicSummary(profile);
+  const actionPlan = buildActionPlan(profile, schoolOpportunityStrategy, matches);
+
   return {
-    strategicSummary: buildStrategicSummary(profile),
+    atGlance: buildAtGlanceSummary(profile, strategicSummary, schoolOpportunityStrategy, matches, testingStrategy, collegeListStrategy),
+    strategicSummary,
     schoolOpportunityStrategy,
-    testingStrategy: buildTestingStrategy(profile),
-    essayStrategy: buildEssayStrategy(profile),
-    collegeListStrategy: buildCollegeListStrategy(profile),
-    actionPlan: buildActionPlan(profile, schoolOpportunityStrategy, matches),
+    testingStrategy,
+    essayStrategy,
+    collegeListStrategy,
+    actionPlan,
   };
 }

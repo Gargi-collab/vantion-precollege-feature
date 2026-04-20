@@ -21,6 +21,11 @@ npm run dev
 
 Then open [http://localhost:3000](http://localhost:3000).
 
+## One-click launchers
+
+- macOS: double-click [launch-vantion.command](/Users/gargidusane/Documents/New%20project/launch-vantion.command)
+- Windows: run [launch-vantion.bat](/Users/gargidusane/Documents/New%20project/launch-vantion.bat)
+
 ## Optional AI setup
 
 The app works without any API keys.
