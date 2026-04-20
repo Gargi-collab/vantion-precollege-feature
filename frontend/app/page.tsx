@@ -1,12 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { EmptyState } from "@/components/EmptyState";
 import { HeroSection } from "@/components/HeroSection";
 import { LoadingExperience } from "@/components/LoadingExperience";
 import { ResultsWorkspace } from "@/components/ResultsWorkspace";
 import { StudentProfileForm } from "@/components/StudentProfileForm";
 import { TopNav } from "@/components/TopNav";
-import { initialProfile, sampleProfile, sampleProfiles } from "@/lib/constants";
+import { initialProfile, sampleProfiles } from "@/lib/constants";
 import { normalizeProfileForSubmit } from "@/lib/utils";
 import { MatchResponse, StudentProfile } from "@/types";
 
@@ -32,11 +33,16 @@ export default function HomePage() {
   };
 
   const handleSubmit = async () => {
+    const payload = normalizeProfileForSubmit(profile);
+    if (!payload.dreamMajor && payload.academicInterests.length === 0) {
+      setError("Add a major or at least one interest so we can match the right programs.");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
     try {
-      const payload = normalizeProfileForSubmit(profile.dreamMajor ? profile : sampleProfile);
       const response = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -50,10 +56,10 @@ export default function HomePage() {
       const data = (await response.json()) as MatchResponse;
       setResult(data);
       requestAnimationFrame(() => {
-        document.getElementById("workspace")?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById("results")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });
     } catch {
-      setError("We couldn't build the plan right now. Please try again in a moment.");
+      setError("We couldn't match programs right now. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
@@ -78,6 +84,7 @@ export default function HomePage() {
       ) : null}
 
       {!loading && result ? <ResultsWorkspace data={result} /> : null}
+      {!loading && !result && !error ? <EmptyState /> : null}
     </main>
   );
 }

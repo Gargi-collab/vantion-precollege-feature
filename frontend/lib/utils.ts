@@ -4,18 +4,14 @@ export function cn(...values: Array<string | false | null | undefined>) {
   return values.filter(Boolean).join(" ");
 }
 
-export function labelize(value: string) {
-  return value.replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
 export function scoreTone(score: number) {
-  if (score >= 84) {
-    return "text-ink bg-[#f3e7d9] border-[#d9c2ad]";
+  if (score >= 88) {
+    return "border-[#d7be9e] bg-[#f2e5d6] text-ink";
   }
-  if (score >= 72) {
-    return "text-brand-800 bg-brand-50 border-brand-200";
+  if (score >= 76) {
+    return "border-[#e4d4c2] bg-[#f7efe6] text-ink";
   }
-  return "text-slate-700 bg-[#f8f1e8] border-line";
+  return "border-line bg-[#faf3eb] text-slate-700";
 }
 
 export function normalizeCsvList(values: string[]) {
@@ -26,19 +22,14 @@ export function normalizeProfileForSubmit(profile: StudentProfile): StudentProfi
   return {
     ...profile,
     dreamMajor: profile.dreamMajor.trim(),
-    dreamUniversities: normalizeCsvList(profile.dreamUniversities),
-    dreamPrograms: normalizeCsvList(profile.dreamPrograms),
     academicInterests: normalizeCsvList(profile.academicInterests),
-    careerInterests: normalizeCsvList(profile.careerInterests),
-    coursesAvailable: normalizeCsvList(profile.coursesAvailable),
-    clubsAvailable: normalizeCsvList(profile.clubsAvailable),
-    leadershipOpportunities: normalizeCsvList(profile.leadershipOpportunities),
+    summerGoals: normalizeCsvList(profile.summerGoals),
+    courseworkBackground: normalizeCsvList(profile.courseworkBackground),
     extracurriculars: normalizeCsvList(profile.extracurriculars),
-    leadershipRoles: normalizeCsvList(profile.leadershipRoles),
-    projectsAwardsCompetitions: normalizeCsvList(profile.projectsAwardsCompetitions),
-    strengths: normalizeCsvList(profile.strengths),
-    weaknesses: normalizeCsvList(profile.weaknesses),
-    personalStatementThemes: normalizeCsvList(profile.personalStatementThemes),
-    majorExperiences: normalizeCsvList(profile.majorExperiences),
+    achievements: normalizeCsvList(profile.achievements),
+    academicStrengths: normalizeCsvList(profile.academicStrengths),
+    homeState: profile.homeState.trim(),
+    programExcitement: profile.programExcitement.trim(),
+    avoidNotes: profile.avoidNotes.trim(),
   };
 }

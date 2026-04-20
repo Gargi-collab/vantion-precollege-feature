@@ -1,200 +1,136 @@
 export type GradeLevel = "9" | "10" | "11" | "12";
-
-export type BudgetLevel = "low" | "moderate" | "high" | "flexible";
-export type LocationPreference = "west coast" | "east coast" | "south" | "midwest" | "online only" | "no strong preference";
-export type SelectivityComfort = "reach-heavy" | "balanced" | "accessible";
-export type Availability = "2-4 weeks" | "4-6 weeks" | "6-8 weeks" | "flexible";
-export type ProgramMode = "online" | "in-person" | "hybrid";
-export type ProgramStyle =
-  | "research"
-  | "academic enrichment"
-  | "leadership"
-  | "internship-like"
-  | "creative"
-  | "online"
-  | "on-campus residential";
-
-export type TestSituation = "no SAT/ACT yet" | "SAT taken" | "ACT taken" | "not planning yet";
-export type ConfidenceLevel = "low" | "medium" | "high";
-export type CounselingSupport = "strong" | "moderate" | "limited";
-export type PriorityLevel = "high" | "medium" | "low";
+export type GpaRange = "3.9+" | "3.6-3.8" | "3.3-3.5" | "3.0-3.2" | "below 3.0";
+export type BudgetComfort = "low" | "moderate" | "high" | "not a major concern";
+export type FormatPreference = "in-person only" | "online only" | "either";
+export type LocationComfort = "local / same state" | "same region" | "anywhere in US" | "international okay";
+export type ResidentialPreference = "residential preferred" | "non-residential preferred" | "either";
+export type DurationPreference = "1-2 weeks" | "3-4 weeks" | "5-6 weeks" | "flexible";
+export type SelectivityComfort = "highly selective is fine" | "balanced" | "prefer realistic options";
+export type ExperienceLevel = "beginner" | "some experience" | "advanced";
 
 export interface StudentProfile {
-  dreamMajor: string;
-  dreamUniversities: string[];
-  dreamPrograms: string[];
-  academicInterests: string[];
-  careerInterests: string[];
   gradeLevel: GradeLevel;
-  gpaRange: string;
-  budgetLevel: BudgetLevel;
-  locationPreference: LocationPreference;
-  summerAvailability: Availability;
-  selectivityComfort: SelectivityComfort;
-  desiredStyles: ProgramStyle[];
-  coursesAvailable: string[];
-  clubsAvailable: string[];
-  leadershipOpportunities: string[];
-  localResearchAvailable: boolean;
-  internshipsAvailable: boolean;
-  volunteeringShadowingAvailable: boolean;
-  counselingSupport: CounselingSupport;
+  gpaRange: GpaRange;
+  dreamMajor: string;
+  academicInterests: string[];
+  summerGoals: string[];
+  courseworkBackground: string[];
   extracurriculars: string[];
-  leadershipRoles: string[];
-  projectsAwardsCompetitions: string[];
-  strengths: string[];
-  weaknesses: string[];
-  testSituation: TestSituation;
-  testingConfidence: ConfidenceLevel;
-  personalStatementThemes: string[];
-  majorExperiences: string[];
-  essayWritingConfidence: ConfidenceLevel;
+  achievements: string[];
+  academicStrengths: string[];
+  priorExperienceLevel: ExperienceLevel;
+  budgetComfort: BudgetComfort;
+  formatPreference: FormatPreference;
+  locationComfort: LocationComfort;
+  homeState: string;
+  residentialPreference: ResidentialPreference;
+  durationPreference: DurationPreference;
+  selectivityComfort: SelectivityComfort;
+  programExcitement: string;
+  avoidNotes: string;
+}
+
+export interface ProgramCsvRecord {
+  program_id: string;
+  program_name: string;
+  institution: string;
+  source_type: string;
+  source_url: string;
+  primary_field: string;
+  secondary_fields: string;
+  interests: string;
+  goals: string;
+  budget: string;
+  format: string;
+  location_preference: string;
+  city: string;
+  state_or_country: string;
+  region: string;
+  selectivity: string;
+  duration: string;
+  duration_weeks: string;
+  season: string;
+  grade_min: string;
+  grade_max: string;
+  support_type: string;
+  tuition_usd: string;
+  financial_aid: string;
+  residential_option: string;
+  description: string;
+  keywords: string;
+  academic_strength_target: string;
+  recommended_gpa_range: string;
+  coursework_background_expected: string;
+  prior_experience_expected: string;
+  academic_rigor_level: string;
+  prerequisite_notes: string;
 }
 
 export interface PreCollegeProgram {
   id: string;
   name: string;
-  provider: string;
-  subjectAreas: string[];
-  description: string;
-  location: string;
-  region: "west coast" | "east coast" | "south" | "midwest" | "national" | "online";
-  mode: ProgramMode;
+  institution: string;
+  sourceType: string;
+  sourceUrl: string;
+  primaryField: string;
+  secondaryFields: string[];
+  interests: string[];
+  goals: string[];
+  budget: string;
+  format: string;
+  locationPreference: string;
+  city: string;
+  stateOrCountry: string;
+  region: string;
+  selectivity: string;
   duration: string;
-  durationCategory: Availability;
-  costRange: string;
-  costBucket: BudgetLevel;
-  deadline: string;
-  gradeEligibility: GradeLevel[];
-  minGpa?: number;
-  competitiveness: "high" | "medium" | "emerging";
-  styleTags: ProgramStyle[];
-  tags: string[];
-  benefits: string[];
-  drawbacks: string[];
-  bestFitStudentProfiles: string[];
-  skillsGained: string[];
-  collegeApplicationValue: string;
-  idealStudentType: string;
-  targetCollegeSignals: string[];
+  durationWeeks: number | null;
+  season: string;
+  gradeMin: number | null;
+  gradeMax: number | null;
+  supportType: string;
+  tuitionUsd: number | null;
+  financialAid: string;
+  residentialOption: string;
+  description: string;
+  keywords: string[];
+  academicStrengthTarget: string;
+  recommendedGpaRange: string;
+  courseworkBackgroundExpected: string;
+  priorExperienceExpected: string;
+  academicRigorLevel: string;
+  prerequisiteNotes: string;
 }
 
 export interface ScoreBreakdown {
-  overall: number;
-  majorAlignment: number;
-  gradeEligibility: number;
-  budgetCompatibility: number;
-  locationPreference: number;
-  stylePreference: number;
-  competitivenessFit: number;
-  modePreference: number;
-  targetCollegeRelevance: number;
-  growthOpportunity: number;
+  interestAlignment: number;
+  goalAlignment: number;
+  academicFit: number;
+  budgetFit: number;
+  formatFit: number;
+  locationFit: number;
+  durationFit: number;
+  residentialFit: number;
+  selectivityFit: number;
+  total: number;
 }
 
-export interface ImpactArea {
-  area: "academic rigor" | "demonstrated interest" | "extracurricular depth" | "leadership" | "major alignment";
-  before: number;
-  after: number;
-}
-
-export interface AiInsights {
-  matchExplanation: string;
-  gapAnalysis: string;
-  impactSummary: string;
-  nextActions: string[];
-  drawbacks: string[];
-  alternatives: string[];
-}
-
-export interface MatchResult {
+export interface ProgramRecommendation {
   program: PreCollegeProgram;
-  score: ScoreBreakdown;
-  reasoningHighlights: string[];
-  strengthensProfile: string[];
-  impactAreas: ImpactArea[];
-  ai: AiInsights;
-}
-
-export interface StrategicSummary {
-  profileSnapshot: string;
-  strongestAssets: string[];
-  biggestGaps: string[];
-  whatMattersMost: string[];
-  recommendedDirection: string;
-}
-
-export interface AtAGlanceSummary {
-  bestNextMove: string;
-  biggestGap: string;
-  strongestSchoolOpportunity: string;
-  bestFitSummerOption: string;
-  testingStance: string;
-  collegeDirection: string;
-}
-
-export interface PrioritizedOpportunity {
-  name: string;
-  priority: PriorityLevel;
-  rationale: string;
-}
-
-export interface SchoolOpportunityStrategy {
-  priorityCourses: PrioritizedOpportunity[];
-  priorityActivities: PrioritizedOpportunity[];
-  leadershipFocus: string[];
-  deprioritize: string[];
-  gapClosure: string[];
-}
-
-export interface TestingStrategy {
-  recommendation: string;
-  whyItMatters: string;
-  plan: string[];
-  testOptionalView: string;
-}
-
-export interface EssayStrategy {
-  promisingThemes: string[];
-  narrativeDirections: string[];
-  genericVsDistinctive: string[];
-  nextSteps: string[];
-}
-
-export interface CollegeRecommendation {
-  name: string;
-  reasoning: string;
-}
-
-export interface CollegeListStrategy {
-  reach: CollegeRecommendation[];
-  target: CollegeRecommendation[];
-  safety: CollegeRecommendation[];
-}
-
-export interface ActionPlan {
-  thisSemester: string[];
-  thisSummer: string[];
-  biggestFirstPriority: string;
-  milestones: string[];
-  fallbackOptions: string[];
-}
-
-export interface CounselorInsights {
-  atGlance: AtAGlanceSummary;
-  strategicSummary: StrategicSummary;
-  schoolOpportunityStrategy: SchoolOpportunityStrategy;
-  testingStrategy: TestingStrategy;
-  essayStrategy: EssayStrategy;
-  collegeListStrategy: CollegeListStrategy;
-  actionPlan: ActionPlan;
+  fitScore: number;
+  scoreBreakdown: ScoreBreakdown;
+  whyItFits: string[];
+  matchedOn: string[];
+  bestFor: string;
+  caution: string;
 }
 
 export interface MatchResponse {
   profile: StudentProfile;
-  insights: CounselorInsights;
-  matches: MatchResult[];
-  topThreeIds: string[];
-  counselorSummary: string;
+  topMatch: ProgramRecommendation | null;
+  backupMatches: ProgramRecommendation[];
+  compareMatches: ProgramRecommendation[];
+  consideredCount: number;
+  eligibleCount: number;
   generatedAt: string;
 }

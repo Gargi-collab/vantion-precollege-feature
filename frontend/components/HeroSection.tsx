@@ -15,12 +15,12 @@ export function HeroSection({ activePresetId, onSelectPreset, presets }: HeroSec
             Pre-college planning
           </p>
 
-          <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-[-0.055em] text-ink sm:text-6xl lg:text-[5.15rem] lg:leading-[0.96]">
-            Plan your path to your target colleges.
+          <h1 className="mt-5 max-w-4xl text-5xl font-semibold tracking-[-0.055em] text-ink sm:text-6xl lg:text-[5rem] lg:leading-[0.96]">
+            Find the right pre-college programs for you.
           </h1>
 
           <p className="mt-5 max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-            Based on your goals, school opportunities, and current profile.
+            Based on your interests, goals, background, and what kind of experience you want.
           </p>
 
           <div className="mt-8 flex flex-wrap items-center gap-4">
@@ -28,9 +28,9 @@ export function HeroSection({ activePresetId, onSelectPreset, presets }: HeroSec
               href="#intake"
               className="inline-flex items-center justify-center rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-600"
             >
-              Start with a student profile
+              Start with your profile
             </a>
-            <span className="text-sm text-slate-500">Short answers first. Details when you want them.</span>
+            <span className="text-sm text-slate-500">Short form. Curated matches.</span>
           </div>
         </div>
 

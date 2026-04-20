@@ -1,7 +1,7 @@
 const navItems = [
   { label: "Home", href: "#top" },
   { label: "Pricing", href: "#intake" },
-  { label: "Insights", href: "#workspace" },
+  { label: "Insights", href: "#results" },
   { label: "About Us", href: "https://www.vantion.com/" },
 ];
 
